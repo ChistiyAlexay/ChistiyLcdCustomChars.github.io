@@ -157,6 +157,7 @@ function drawGridLines() {
 function mousePressed() {
   handleMouse();
   if (mouseButton === RIGHT) return false;
+  printAllBlocks();
 }
 
 function mouseDragged() {
@@ -185,6 +186,7 @@ function handleMouse() {
   if (localCol < 0 || localCol >= blockCols || localRow < 0 || localRow >= blockRows) return;
   if (mouseButton === LEFT) blocks[blockIndex][localCol][localRow] = true;
   else if (mouseButton === RIGHT) blocks[blockIndex][localCol][localRow] = false;
+  printAllBlocks();
 }
 
 function keyPressed() {
@@ -224,7 +226,7 @@ function printAllBlocks() {
     }
     blocksContainer.appendChild(rowDiv);
   }
-  
+
   // Добавляем надпись "привет!" под блоками
   const greeting = document.createElement('div');
   greeting.textContent = 'С - стереть всё. ПКМ - стереть выбранный пиксель. ЛКМ - рисовать';
