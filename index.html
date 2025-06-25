@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<title>LCD CUSTOM CHARS</title>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.6.0/lib/p5.min.js"></script>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    font-family: monospace;
+    display: flex;
+  }
+  #canvasContainer {
+    position: relative;
+  }
+  #blocksContainer {
+    width: 800px;
+    height: 100vh;
+    overflow-y: auto;
+    border: 2px solid green;
+    background: #f0fff0;
+    padding: 10px;
+    box-sizing: border-box;
+    font-size: 16px;
+  }
+  .blocks-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .block-wrapper {
+    background: white;
+    border: 1px solid #ccc;
+    padding: 6px;
+    border-radius: 4px;
+    width: 45%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  pre {
+    margin: 0;
+    white-space: pre;
+    font-family: monospace;
+    user-select: text;
+    flex-grow: 1;
+  }
+  button.copy-btn {
+    margin-left: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    height: fit-content;
+  }
+</style>
+</head>
+<body>
+  <div id="canvasContainer"></div>
+  <div id="blocksContainer" aria-label="Blocks output"></div>
+
+<script>
+const blockCols = 5;
+const blockRows = 8;
+const gapSize = 1;
+const gapColor = [0, 255, 0];
+
+let blocks = [];
+for (let b = 0; b < 8; b++) {
+  blocks[b] = [];
+  for (let i = 0; i < blockCols; i++) {
+    blocks[b][i] = [];
+    for (let j = 0; j < blockRows; j++) {
+      blocks[b][i][j] = false;
+    }
+  }
+}
+
+let canvasWidth, canvasHeight;
+let gridSize;
+
+let blocksContainer;
+let canvas;
+
+function setup() {
+  calculateCanvasAndGridSize();
+  canvas = createCanvas(canvasWidth, canvasHeight);
+  canvas.parent('canvasContainer');
+  noStroke();
+  frameRate(400);
+  blocksContainer = document.getElementById('blocksContainer');
+  window.addEventListener('resize', () => {
+    calculateCanvasAndGridSize();
+    resizeCanvas(canvasWidth, canvasHeight);
+  });
+  printAllBlocks();
+}
+
+function calculateCanvasAndGridSize() {
+  const availableWidth = window.innerWidth - 400;
+  const availableHeight = window.innerHeight;
+  const totalCols = blockCols * 4 + gapSize * 3;
+  const totalRows = blockRows * 2 + gapSize;
+  const gridSizeWidth = Math.floor(availableWidth / totalCols);
+  const gridSizeHeight = Math.floor(availableHeight / totalRows);
+  gridSize = Math.max(10, Math.min(gridSizeWidth, gridSizeHeight));
+  canvasWidth = totalCols * gridSize;
+  canvasHeight = totalRows * gridSize;
+}
+
+function draw() {
+  background(255);
+  drawBlocksWithGaps();
+  drawGridLines();
+}
+
+function drawBlocksWithGaps() {
+  for (let rowBlock = 0; rowBlock < 2; rowBlock++) {
+    for (let colBlock = 0; colBlock < 4; colBlock++) {
+      let blockIndex = rowBlock * 4 + colBlock;
+      let xBlock = colBlock * (blockCols + gapSize);
+      let yBlock = rowBlock * (blockRows + gapSize);
+      drawBlock(blockIndex, xBlock, yBlock);
+    }
+  }
+  fill(...gapColor);
+  noStroke();
+  for (let i = 1; i < 4; i++) {
+    let x = i * blockCols * gridSize + (i - 1) * gapSize * gridSize;
+    rect(x, 0, gapSize * gridSize, height);
+  }
+  for (let i = 1; i < 2; i++) {
+    let y = i * blockRows * gridSize + (i - 1) * gapSize * gridSize;
+    rect(0, y, width, gapSize * gridSize);
+  }
+}
+
+function drawBlock(blockIndex, blockX, blockY) {
+  for (let i = 0; i < blockCols; i++) {
+    for (let j = 0; j < blockRows; j++) {
+      let x = blockX * gridSize + i * gridSize;
+      let y = blockY * gridSize + j * gridSize;
+      fill(blocks[blockIndex][i][j] ? 0 : 255);
+      rect(x, y, gridSize, gridSize);
+    }
+  }
+}
+
+function drawGridLines() {
+  stroke(200);
+  for (let x = 0; x <= width; x += gridSize) line(x, 0, x, height);
+  for (let y = 0; y <= height; y += gridSize) line(0, y, width, y);
+  noStroke();
+}
+
+function mousePressed() {
+  handleMouse();
+  if (mouseButton === RIGHT) return false;
+}
+
+function mouseDragged() {
+  handleMouse();
+  printAllBlocks();
+}
+
+function handleMouse() {
+  if (mouseX < 0 || mouseY < 0 || mouseX >= width || mouseY >= height) return;
+  let col = Math.floor(mouseX / gridSize);
+  let row = Math.floor(mouseY / gridSize);
+  for (let i = 1; i < 4; i++) {
+    let gapCol = i * blockCols + (i - 1) * gapSize;
+    if (col >= gapCol && col < gapCol + gapSize) return;
+  }
+  for (let i = 1; i < 2; i++) {
+    let gapRow = i * blockRows + (i - 1) * gapSize;
+    if (row >= gapRow && row < gapRow + gapSize) return;
+  }
+  let blockCol = Math.floor(col / (blockCols + gapSize));
+  let blockRow = Math.floor(row / (blockRows + gapSize));
+  if (blockCol < 0 || blockCol >= 4 || blockRow < 0 || blockRow >= 2) return;
+  let blockIndex = blockRow * 4 + blockCol;
+  let localCol = col % (blockCols + gapSize);
+  let localRow = row % (blockRows + gapSize);
+  if (localCol < 0 || localCol >= blockCols || localRow < 0 || localRow >= blockRows) return;
+  if (mouseButton === LEFT) blocks[blockIndex][localCol][localRow] = true;
+  else if (mouseButton === RIGHT) blocks[blockIndex][localCol][localRow] = false;
+}
+
+function keyPressed() {
+  if (key === 'p' || key === 'P' || key === 'з') printAllBlocks();
+  if (key === 'c' || key === 'C' || key === 'с') clearAllBlocks();
+}
+
+function printAllBlocks() {
+  blocksContainer.innerHTML = '';
+  for (let rowBlock = 0; rowBlock < 2; rowBlock++) {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'blocks-row';
+    for (let colBlock = 0; colBlock < 4; colBlock++) {
+      const blockIndex = rowBlock * 4 + colBlock;
+      let blockText = ``;
+      for (let j = 0; j < blockRows; j++) {
+        let line = '';
+        for (let i = 0; i < blockCols; i++) line += blocks[blockIndex][i][j] ? '1' : '0';
+        blockText += '0b' + line + ',\n';
+      }
+      const blockWrapper = document.createElement('div');
+      blockWrapper.className = 'block-wrapper';
+      const pre = document.createElement('pre');
+      pre.textContent = blockText;
+      const btn = document.createElement('button');
+      btn.textContent = 'Копировать';
+      btn.className = 'copy-btn';
+      btn.title = `Копировать блок ${blockIndex + 1}`;
+      btn.addEventListener('click', () => {
+        console.log('Копируем текст блока', blockIndex + 1);
+        console.log(blockText);
+        copyText(blockText, btn);
+      });
+      blockWrapper.appendChild(pre);
+      blockWrapper.appendChild(btn);
+      rowDiv.appendChild(blockWrapper);
+    }
+    blocksContainer.appendChild(rowDiv);
+  }
+  
+  // Добавляем надпись "привет!" под блоками
+  const greeting = document.createElement('div');
+  greeting.textContent = 'С - стереть всё. ПКМ - стереть выбранный пиксель. ЛКМ - рисовать';
+  greeting.style.marginTop = '20px';
+  greeting.style.fontWeight = 'bold';
+  greeting.style.fontSize = '20px';
+  greeting.style.textAlign = 'center';
+  blocksContainer.appendChild(greeting);
+}
+
+
+async function copyText(text, btn) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = 'Скопировано!';
+      setTimeout(() => btn.textContent = 'Копировать', 1500);
+    } catch (err) {
+      console.error('Clipboard API failed, fallback to execCommand', err);
+      fallbackCopy(text, btn);
+    }
+  } else {
+    fallbackCopy(text, btn);
+  }
+}
+
+function fallbackCopy(text, btn) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.top = '-9999px';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+
+  try {
+    const successful = document.execCommand('copy');
+    if (successful) {
+      btn.textContent = 'Скопировано!';
+      setTimeout(() => btn.textContent = 'Копировать', 1500);
+    } else {
+      alert('Не удалось скопировать текст');
+    }
+  } catch (err) {
+    alert('Не удалось скопировать текст');
+    console.error('execCommand copy failed', err);
+  }
+
+  document.body.removeChild(ta);
+}
+
+function clearAllBlocks() {
+  for (let n = 0; n < 8; n++)
+    for (let i = 0; i < blockCols; i++)
+      for (let j = 0; j < blockRows; j++)
+        blocks[n][i][j] = false;
+  printAllBlocks();
+}
+
+window.addEventListener("contextmenu", e => {
+  if (e.target === canvas || e.target === document.querySelector('canvas')) e.preventDefault();
+});
+</script>
+</body>
+</html>
